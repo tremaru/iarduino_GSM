@@ -16,14 +16,14 @@
     #define pinRX  8                                                                                                    // Вывод Arduino RX подключаемый к выводу TX GSM/GPRS Shield A9.
     #define pinTX  9                                                                                                    // Вывод Arduino TX подключаемый к выводу RX GSM/GPRS Shield A9.
                                                                                                                         //
-    #include <iarduino_GSM.h>                                                                                           // Подключаем библиотеку iarduino_GSM для работы с GSM/GPRS Shield.
-    iarduino_GSM gsm(pinPWR);                                                                                           // Создаём объект gsm для работы с функциями и методами библиотеки iarduino_GSM, указав вывод PWR.
-                                                                                                                        //
 //  Следующие 2 строки нужны для работы по программной шине UATR:                                                       //
-    #include <SoftwareSerial.h>                                                                                         // Подключаем библиотеку SoftwareSerial для программной реализации шины UART.
+    #include <SoftwareSerial.h>                                                                                         // Подключаем библиотеку SoftwareSerial для программной реализации шины UART, до подключения библиотеки iarduino_GSM.
     SoftwareSerial softSerial(pinRX, pinTX);                                                                            // Создаём объект softSerial указав выводы RX и TX Arduino используемые для программной шины UART.
 //  Если Вы работаете c GSM/GPRS Shield по аппаратной шине UATR, удалите 2 предыдущие строки,                           //
 //  а в функции gsm.begin(), вместо softSerial укажите Serial или Serial1, Serial2 ...                                  // Зависит от номера аппаратной шины UART вашей платы Arduino.
+                                                                                                                        //
+    #include <iarduino_GSM.h>                                                                                           // Подключаем библиотеку iarduino_GSM для работы с GSM/GPRS Shield.
+    iarduino_GSM gsm(pinPWR);                                                                                           // Создаём объект gsm для работы с функциями и методами библиотеки iarduino_GSM, указав вывод PWR.
                                                                                                                         //
     char     SMStxt[161];                                                                                               // Объявляем строку для хранения текста принятых SMS сообщений.
     char     SMSnum[ 13];                                                                                               // Объявляем строку для хранения номера отправителя SMS сообщений.

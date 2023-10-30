@@ -1,5 +1,5 @@
 //	Библиотека для работы с GSM/GPRS Shield A6: http://iarduino.ru/shop/Expansion-payments/gsm-gprs-shield.html
-//  Версия: 1.0.2
+//  Версия: 1.1.0
 //  Последнюю версию библиотеки Вы можете скачать по ссылке: http://iarduino.ru/file/345.html
 //  Подробное описание функции бибилиотеки доступно по ссылке: https://wiki.iarduino.ru/page/gsm-gprs-shield/
 //  Библиотека является собственностью интернет магазина iarduino.ru и может свободно использоваться и распространяться!
@@ -8,17 +8,19 @@
 //  Автор библиотеки: Панькин Павел
 //  Если у Вас возникли технические вопросы, напишите нам: shop@iarduino.ru
 
-#ifndef iarduino_GSM_h
-#define iarduino_GSM_h
-
-#include "SoftwareSerial.h"
-
-#if defined(ARDUINO) && (ARDUINO >= 100)
-#include <Arduino.h>
-#else
-#include <WProgram.h>
-#endif
-
+#ifndef iarduino_GSM_h																															//
+#define iarduino_GSM_h																															//
+																																				//
+#ifdef    SoftwareSerial_h																														//	Если в скетче подключена библиотека  SoftwareSerial,
+#include "SoftwareSerial.h"																														//	то разрешаем работать  с библиотекой SoftwareSerial.
+#endif																																			//
+																																				//
+#if defined(ARDUINO) && (ARDUINO >= 100)																										//
+#include <Arduino.h>																															//
+#else																																			//
+#include <WProgram.h>																															//
+#endif																																			//
+																																				//
 #define GSM_UART_SPEED		9600																												//	Скорость шины UART на которой требуется работать			(9600 бит/сек)
 #define	GSM_TXT_CP866		0																													//	Название кодировки в которой написан текст.					(паремр функций TXTsendCoding() и TXTreadCoding() указывающий кодировку CP866)
 #define	GSM_TXT_UTF8		1																													//	Название кодировки в которой написан текст.					(паремр функций TXTsendCoding() и TXTreadCoding() указывающий кодировку UTF8)
@@ -58,8 +60,10 @@
 class iarduino_GSM{																																//	
 																																				//	
 	public:			iarduino_GSM			(uint8_t);																							//	Объявляем  конструктор класса								(аргумент функции: № вывода к которому подключён вход PWR модуля)
-		bool		begin					(HardwareSerial &i){flgType=0; objSerial=&i; return _begin();}										//	Определяем функцию инициализации модуля						(аргумент функции: объект для работы с аппаратным UART)
-		bool		begin					(SoftwareSerial &i){flgType=1; objSerial=&i; return _begin();}										//	Определяем функцию инициализации модуля						(аргумент функции: объект для работы с программным UART)
+		bool		begin					(HardwareSerial &i){flgType=1; objSerial=&i; return _begin();}										//	Определяем функцию инициализации модуля						(аргумент функции: объект для работы с аппаратным UART)
+		#ifdef SoftwareSerial_h																													//
+		bool		begin					(SoftwareSerial &i){flgType=0; objSerial=&i; return _begin();}										//	Определяем функцию инициализации модуля						(аргумент функции: объект для работы с программным UART)
+		#endif																																	//
 		String		runAT					(String      Command, uint32_t TimeOut=200, bool NoWait=true);										//	Объявляем  функцию выполнения AT-команд						(аргумент функции: строка с АТ-командой,  таймаут в миллисекундах, флаг разрешающий досрочный выход при ответе "\r\nOK\r\n" или "ERROR")
 		String		runAT					(const char* Command, uint32_t TimeOut=200, bool NoWait=true);										//	Объявляем  функцию выполнения AT-команд						(аргумент функции: строка с АТ-командой,  таймаут в миллисекундах, флаг разрешающий досрочный выход при ответе "\r\nOK\r\n" или "ERROR")
 		String		runUSSD					(String      Command, uint32_t TimeOut=10000);														//	Объявляем  функцию выполнения USSD-запроса					(аргумент функции: строка с USSD-запросом, таймаут в миллисекундах)
@@ -116,7 +120,7 @@ class iarduino_GSM{																																//
 		void		_SMSdecodAddr			(      char*, uint16_t, uint16_t);																	//	Объявляем  функцию разкодирования адреса SMS из strBuffer	(строка для адреса, количество полубайт в адресе, позиция адреса  в строке strBuffer)
 		void		_SMSdecodDate			(      char*,           uint16_t);																	//	Объявляем  функцию разкодирования даты SMS из strBuffer		(строка для даты,                                 позиция даты    в строке strBuffer)
 		uint8_t		pinGSMPWR;																													//	Объявляем  переменную для хранения номера вывода PWR		(число)
-		bool		flgType;																													//	Объявляем  флаг указывающий на тип соединения				(0-HardwareSerial, 1-SoftwareSerial)
+		bool		flgType;																													//	Объявляем  флаг указывающий на тип соединения				(0-SoftwareSerial, 1-HardwareSerial)
 		bool		flgSpeed;																													//	Объявляем  флаг указывающий на согласование скорости		(true/false)
 		void*		objSerial;																													//	Объявляем  указатель на объект работы с UART				(Serial, Serial1, ..., SoftwareSerial)
 		String		strBuffer;																													//	Объявляем  строку для работы с текстовыми данными			(массив)

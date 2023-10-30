@@ -1,5 +1,4 @@
 #include "iarduino_GSM.h"																																	//	
-#include "SoftwareSerial.h"																																	//	
 																																							//	
 //		КОНСТРУКТОР КЛАССА:																																	//	
 		iarduino_GSM::iarduino_GSM(uint8_t pin){pinGSMPWR=pin;}																								//	Аргументы конструктора:	pin - номер вывода Arduino к которому подключён вывод PWR.
@@ -14,27 +13,35 @@ bool	iarduino_GSM::_begin(void){																															//	Аргумен
 //			Настройка скорости модуля:																														//	
 			for(uint8_t i=0; i<5; i++){																														//	Всего 5 попыток.
 //				Разрываем связь UART:																														//	
-				if(flgType)	{(*(SoftwareSerial*)objSerial).end();}																							//	
-				else		{(*(HardwareSerial*)objSerial).end();}																							//	
+				if(flgType)	{(*(HardwareSerial*)objSerial).end();}																							//	
+				#ifdef SoftwareSerial_h																														//
+				else		{(*(SoftwareSerial*)objSerial).end();}																							//	
+				#endif																																		//
 				delay(100);																																	//	
 //				Инициируем передачу данных по UART на скорости 115200:																						//	115200 бит/сек - это скорость на которой модуль работает по умолчанию
-				if(flgType)	{(*(SoftwareSerial*)objSerial).begin(115200);}																					//	
-				else		{(*(HardwareSerial*)objSerial).begin(115200);}																					//	
+				if(flgType)	{(*(HardwareSerial*)objSerial).begin(115200);}																					//	
+				#ifdef SoftwareSerial_h																														//
+				else		{(*(SoftwareSerial*)objSerial).begin(115200);}																					//	
+				#endif																																		//
 				delay(100);																																	//	
 //				Ждём готовность аппаратного UART после инициализации:																						//	На случай работы с Serial1, Serial2 и т.д.
-				if(!flgType){while(!(*(HardwareSerial*)objSerial)){;}}																						//	
+				if(flgType){while(!(*(HardwareSerial*)objSerial)){;}}																						//	
 //				Отправляем команду модулю, перейти на скорость GSM_UART_SPEED																				//	
 				runAT( ((String) "ATZ+IPR=" + GSM_UART_SPEED + "\r\n"), 500, false);																		//	Команда ATZ+IPR=СКОРОСТЬ - указывает модулю перейти на указанную скорость передачи данных по шине UART.
 //				Разрываем связь UART:																														//	
-				if(flgType)	{(*(SoftwareSerial*)objSerial).end();}																							//	
-				else		{(*(HardwareSerial*)objSerial).end();}																							//	
+				if(flgType)	{(*(HardwareSerial*)objSerial).end();}																							//	
+				#ifdef SoftwareSerial_h																														//
+				else		{(*(SoftwareSerial*)objSerial).end();}																							//	
+				#endif																																		//
 				delay(100);																																	//	
 //				Инициируем передачу данных по UART на скорости GSM_UART_SPEED:																				//	При работе с аппаратным UART не на всех платах Arduino удаётся стабильно работать на скорости 115200.
-				if(flgType)	{(*(SoftwareSerial*)objSerial).begin(GSM_UART_SPEED);}																			//	По этому приходится переходить на более низкие скорости. Новая скорость указана в константе GSM_UART_SPEED.
-				else		{(*(HardwareSerial*)objSerial).begin(GSM_UART_SPEED);}																			//	
+				if(flgType)	{(*(HardwareSerial*)objSerial).begin(GSM_UART_SPEED);}																			//	По этому приходится переходить на более низкие скорости. Новая скорость указана в константе GSM_UART_SPEED.
+				#ifdef SoftwareSerial_h																														//
+				else		{(*(SoftwareSerial*)objSerial).begin(GSM_UART_SPEED);}																			//	
+				#endif																																		//
 				delay(100);																																	//	
 //				Ждём готовность аппаратного UART после инициализации:																						//	На случай работы с Serial1, Serial2 и т.д.
-				if(!flgType){while(!(*(HardwareSerial*)objSerial)){;}}																						//	
+				if(flgType){while(!(*(HardwareSerial*)objSerial)){;}}																						//	
 //				Проверяем наличие связи с модулем:																											//	
 				for(uint8_t j=0; j<10; j++){ if(runAT(F("AT\r\n")).indexOf(F("\r\nOK\r\n")) > -1){i=5; j=10; flgSpeed=false;} }								//	Если на команду "AT" модуль ответит "\r\nOK\r\n", то принудительно выходим из циклов.
 			}	if(!flgSpeed){flgSpeed = true;}else{flgSpeed=false; return false;}																			//	Если флаг flgSpeed сброшен, значит скорость установлена, иначе сбрасываем флаг flgSpeed и выходим из функции.
@@ -44,8 +51,10 @@ bool	iarduino_GSM::_begin(void){																															//	Аргумен
 			do{	flgBuff = false;																															//	Сбрасываем флаг flgBuff.
 				millisEnd = millis() + 5000;																												//	Устанавливаем время выхода из режима ожидания завершения незапрашиваемых кодов от модуля.
 				while(millis()<millisEnd){																													//	Пока указанное время не достигнуто ...
-					if(flgType)	{if((*(SoftwareSerial*)objSerial).available()>0){(*(SoftwareSerial*)objSerial).read(); flgBuff=true;}}						//	Проверяем наличие сомволов в буфере UART, если символ есть, то читаем его в никуда и устанавливаем флаг flgBuff.
-					else		{if((*(HardwareSerial*)objSerial).available()>0){(*(HardwareSerial*)objSerial).read(); flgBuff=true;}}						//	Проверяем наличие сомволов в буфере UART, если символ есть, то читаем его в никуда и устанавливаем флаг flgBuff.
+					if(flgType)	{if((*(HardwareSerial*)objSerial).available()>0){(*(HardwareSerial*)objSerial).read(); flgBuff=true;}}						//	Проверяем наличие сомволов в буфере UART, если символ есть, то читаем его в никуда и устанавливаем флаг flgBuff.
+					#ifdef SoftwareSerial_h																													//
+					else		{if((*(SoftwareSerial*)objSerial).available()>0){(*(SoftwareSerial*)objSerial).read(); flgBuff=true;}}						//	Проверяем наличие сомволов в буфере UART, если символ есть, то читаем его в никуда и устанавливаем флаг flgBuff.
+					#endif																																	//
 					if(flgBuff)	{millisEnd=millis();}																										//	Если флаг flgBuff установлен, значит мы продолжаем получать незапрашиваемые коды, выходим из цикла для обновления времени ожидания.
 				}																																			//	
 			}	while(flgBuff);																																//	Если флаг flgBuff установлен, повторяем цикл, при новом проходе цикла время ожидания будет обновлено.
@@ -363,11 +372,15 @@ String	iarduino_GSM::runAT(String command, uint32_t timeout, bool early){							
 			uint8_t cnt = 0;																																//	Счетчик совпадний ответа со строкой "\r\nOK\r\n" или "ERROR".
 			uint32_t millisEnd;																																//	Переменная для хранения времени выхода из функции.
 //			Чистим буфер UART:																																//	
-			if(flgType)	{while((*(SoftwareSerial*)objSerial).available()>0){(*(SoftwareSerial*)objSerial).read();}}											//	Читаем все символы из буфера в никуда.
-			else		{while((*(HardwareSerial*)objSerial).available()>0){(*(HardwareSerial*)objSerial).read();}}											//	Читаем все символы из буфера в никуда.
+			if(flgType)	{while((*(HardwareSerial*)objSerial).available()>0){(*(HardwareSerial*)objSerial).read();}}											//	Читаем все символы из буфера в никуда.
+			#ifdef SoftwareSerial_h																															//
+			else		{while((*(SoftwareSerial*)objSerial).available()>0){(*(SoftwareSerial*)objSerial).read();}}											//	Читаем все символы из буфера в никуда.
+			#endif																																			//
 //			Передаём AT-команду:																															//	
-			if(flgType)	{(*(SoftwareSerial*)objSerial).print(command);}																						//	
-			else		{(*(HardwareSerial*)objSerial).print(command);}																						//	
+			if(flgType)	{(*(HardwareSerial*)objSerial).print(command);}																						//	
+			#ifdef SoftwareSerial_h																															//
+			else		{(*(SoftwareSerial*)objSerial).print(command);}																						//	
+			#endif																																			//
 //			Чистим строку для получения ответа:																												//	
 			strBuffer = "";																																	//	
 //			Определяем время выхода из функции:																												//	
@@ -376,8 +389,10 @@ String	iarduino_GSM::runAT(String command, uint32_t timeout, bool early){							
 			while(millis()<millisEnd){																														//	
 //				Читаем очередной символ:																													//	
 				f=0;																																		//
-				if(flgType)	{if((*(SoftwareSerial*)objSerial).available()>0){i=(*(SoftwareSerial*)objSerial).read(); strBuffer+=i; f=1;}else{delay(10);}}	//	
-				else		{if((*(HardwareSerial*)objSerial).available()>0){i=(*(HardwareSerial*)objSerial).read(); strBuffer+=i; f=1;}else{delay(10);}}	//	
+				if(flgType)	{if((*(HardwareSerial*)objSerial).available()>0){i=(*(HardwareSerial*)objSerial).read(); strBuffer+=i; f=1;}else{delay(10);}}	//	
+				#ifdef SoftwareSerial_h																														//
+				else		{if((*(SoftwareSerial*)objSerial).available()>0){i=(*(SoftwareSerial*)objSerial).read(); strBuffer+=i; f=1;}else{delay(10);}}	//	
+				#endif																																		//
 //				Досрочно выходим из цикла получения ответа:																									//	Проверяем не пришли ли подряд символы "\r\nOK\r\n" или "ERROR".
 				if(early){																																	//
 					if(f){																																	//
@@ -420,8 +435,10 @@ String	iarduino_GSM::runUSSD(String command, uint32_t timeout){																	
 			while(millis()<millisEnd){																														//	
 //				Читаем очередной символ:																													//	
 				f=0;																																		//
-				if(flgType)	{if((*(SoftwareSerial*)objSerial).available()>0){j=(*(SoftwareSerial*)objSerial).read(); strBuffer+=j; f=1;}else{delay(10);}}	//	
-				else		{if((*(HardwareSerial*)objSerial).available()>0){j=(*(HardwareSerial*)objSerial).read(); strBuffer+=j; f=1;}else{delay(10);}}	//	
+				if(flgType)	{if((*(HardwareSerial*)objSerial).available()>0){j=(*(HardwareSerial*)objSerial).read(); strBuffer+=j; f=1;}else{delay(10);}}	//	
+				#ifdef SoftwareSerial_h																														//
+				else		{if((*(SoftwareSerial*)objSerial).available()>0){j=(*(SoftwareSerial*)objSerial).read(); strBuffer+=j; f=1;}else{delay(10);}}	//	
+				#endif																																		//
 //				Досрочно выходим из цикла получения ответа:																									//	Проверяем не пришли ли подряд символы "\r\nOK\r\n" или "ERROR".
 				if(f){																																		//
 					if(cnt==0) {if(j=='\r'){cnt++;}else{cnt=0;}}else																						//	Если при отсутствии совпадений пришел символ '\r', то считаем его 1 символом совпавшим с 1 строкой "\r\n".
