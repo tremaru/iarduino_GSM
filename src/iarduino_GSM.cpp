@@ -3,90 +3,6 @@
 //		КОНСТРУКТОР КЛАССА:																																	//	
 		iarduino_GSM::iarduino_GSM(uint8_t pin){pinGSMPWR=pin;}																								//	Аргументы конструктора:	pin - номер вывода Arduino к которому подключён вывод PWR.
 																																							//	
-//		ФУНКЦИЯ ИНИЦИАЛИЗАЦИИ МОДУЛЯ:																														//	Функция возвращает:	флаг результата инициализации (true/false).
-bool	iarduino_GSM::_begin(void){																															//	Аргументы функции:	отсутствуют.
-			flgSpeed = true;																																//	Устанавливаем флаг согласования скорости, иначе функция runAT() не будет работать.
-//			Выключаем и включаем модуль:																													//	
-			pinMode     (pinGSMPWR, OUTPUT);																												//	Переводим вывод pinGSMPWR в режим выхода.
-			digitalWrite(pinGSMPWR, HIGH); delay(2000);																										//	Устанавливаем на выводе pinGSMPWR уровень логической 1 (выключаем модуль).
-			digitalWrite(pinGSMPWR, LOW ); delay(2000);																										//	Устанавливаем на выводе pinGSMPWR уровень логического 0 (включаем модуль).
-//			Настройка скорости модуля:																														//	
-			for(uint8_t i=0; i<5; i++){																														//	Всего 5 попыток.
-//				Разрываем связь UART:																														//	
-				if(flgType)	{(*(HardwareSerial*)objSerial).end();}																							//	
-				#ifdef SoftwareSerial_h																														//
-				else		{(*(SoftwareSerial*)objSerial).end();}																							//	
-				#endif																																		//
-				delay(100);																																	//	
-//				Инициируем передачу данных по UART на скорости 115200:																						//	115200 бит/сек - это скорость на которой модуль работает по умолчанию
-				if(flgType)	{(*(HardwareSerial*)objSerial).begin(115200);}																					//	
-				#ifdef SoftwareSerial_h																														//
-				else		{(*(SoftwareSerial*)objSerial).begin(115200);}																					//	
-				#endif																																		//
-				delay(100);																																	//	
-//				Ждём готовность аппаратного UART после инициализации:																						//	На случай работы с Serial1, Serial2 и т.д.
-				if(flgType){while(!(*(HardwareSerial*)objSerial)){;}}																						//	
-//				Отправляем команду модулю, перейти на скорость GSM_UART_SPEED																				//	
-				runAT( ((String) "ATZ+IPR=" + GSM_UART_SPEED + "\r\n"), 500, false);																		//	Команда ATZ+IPR=СКОРОСТЬ - указывает модулю перейти на указанную скорость передачи данных по шине UART.
-//				Разрываем связь UART:																														//	
-				if(flgType)	{(*(HardwareSerial*)objSerial).end();}																							//	
-				#ifdef SoftwareSerial_h																														//
-				else		{(*(SoftwareSerial*)objSerial).end();}																							//	
-				#endif																																		//
-				delay(100);																																	//	
-//				Инициируем передачу данных по UART на скорости GSM_UART_SPEED:																				//	При работе с аппаратным UART не на всех платах Arduino удаётся стабильно работать на скорости 115200.
-				if(flgType)	{(*(HardwareSerial*)objSerial).begin(GSM_UART_SPEED);}																			//	По этому приходится переходить на более низкие скорости. Новая скорость указана в константе GSM_UART_SPEED.
-				#ifdef SoftwareSerial_h																														//
-				else		{(*(SoftwareSerial*)objSerial).begin(GSM_UART_SPEED);}																			//	
-				#endif																																		//
-				delay(100);																																	//	
-//				Ждём готовность аппаратного UART после инициализации:																						//	На случай работы с Serial1, Serial2 и т.д.
-				if(flgType){while(!(*(HardwareSerial*)objSerial)){;}}																						//	
-//				Проверяем наличие связи с модулем:																											//	
-				for(uint8_t j=0; j<10; j++){ if(runAT(F("AT\r\n")).indexOf(F("\r\nOK\r\n")) > -1){i=5; j=10; flgSpeed=false;} }								//	Если на команду "AT" модуль ответит "\r\nOK\r\n", то принудительно выходим из циклов.
-			}	if(!flgSpeed){flgSpeed = true;}else{flgSpeed=false; return false;}																			//	Если флаг flgSpeed сброшен, значит скорость установлена, иначе сбрасываем флаг flgSpeed и выходим из функции.
-//			Ждём завершения потока незапрашиваемых кодов от модуля:																							//	
-			uint32_t millisEnd;																																//	Объявляем переменную для хранения время выхода из режима ожидания завершения незапрашиваемых кодов от модуля.
-			bool flgBuff;																																	//	Объявляем флаг получения незапрашиваемых кодов от модуля.
-			do{	flgBuff = false;																															//	Сбрасываем флаг flgBuff.
-				millisEnd = millis() + 5000;																												//	Устанавливаем время выхода из режима ожидания завершения незапрашиваемых кодов от модуля.
-				while(millis()<millisEnd){																													//	Пока указанное время не достигнуто ...
-					if(flgType)	{if((*(HardwareSerial*)objSerial).available()>0){(*(HardwareSerial*)objSerial).read(); flgBuff=true;}}						//	Проверяем наличие сомволов в буфере UART, если символ есть, то читаем его в никуда и устанавливаем флаг flgBuff.
-					#ifdef SoftwareSerial_h																													//
-					else		{if((*(SoftwareSerial*)objSerial).available()>0){(*(SoftwareSerial*)objSerial).read(); flgBuff=true;}}						//	Проверяем наличие сомволов в буфере UART, если символ есть, то читаем его в никуда и устанавливаем флаг flgBuff.
-					#endif																																	//
-					if(flgBuff)	{millisEnd=millis();}																										//	Если флаг flgBuff установлен, значит мы продолжаем получать незапрашиваемые коды, выходим из цикла для обновления времени ожидания.
-				}																																			//	
-			}	while(flgBuff);																																//	Если флаг flgBuff установлен, повторяем цикл, при новом проходе цикла время ожидания будет обновлено.
-//			Проверяем готовность модуля:																													//	
-			switch( status() ){																																//	
-				case GSM_SIM_NO:		return false; break;																								//	Модуль не может работать, нет сим карты.
-				case GSM_SIM_FAULT:		return false; break;																								//	Модуль не может работать, сим карта неисправна.
-				case GSM_SIM_ERR:		return false; break;																								//	Модуль не может работать, сим карта не прошла проверку.
-				case GSM_REG_FAULT:		return false; break;																								//	Модуль не может работать, оператор сотовой связи отклонил регистрацию модема в своей сети.
-				case GSM_UNAVAILABLE:	return false; break;																								//	Модуль не может работать, так как он недоступен и не выполняет AT-команды.
-				case GSM_UNKNOWN:		return false; break;																								//	Модуль не может работать, так как его статус неизвестен и не гарантирует корректное выполнение AT-команд.
-				case GSM_SLEEP:			return false; break;																								//	Модуль не может работать, так как он находится в режиме ограниченной функциональности.
-			}																																				//	
-//			Отправляем модулю команды конфигурации:																											//	
-			runAT(F("AT+CSCS=\"HEX\"\r\n"));																												//	AT+CSCS="HEX"			- Устанавливаем шестнадцатиричный набор символов.
-			runAT(F("AT+CPMS=\"SM\",\"SM\",\"SM\"\r\n"));																									//	AT+CPMS="SM","SM","SM"	- "SM"-использовать память SIM-карты для просмотра, чтения и удаления сообщений, "SM"-использовать память SIM-карты для написания и отправки сообщений, "SM"-использовать память SIM-карты для получения и сохранения сообщений.
-			runAT(F("ATE0\r\n"));																															//	ATE0					- Отключить эхо.
-			runAT(F("ATV1\r\n"));																															//	ATV1					- Отвечать на команды текстом, а не которкими цифровыми ответами.
-			runAT(F("AT+CMEE=1\r\n"));																														//	AT+CMEE=1				- При возникновении ошибок возвращать ERROR и код ошибки.
-			runAT(F("AT+CREG=0\r\n"));																														//	AT+CREG=0				- Отключить незапрашиваемые сообщения о статусе регистрации в сети.
-			runAT(F("AT+CMGF=0\r\n"));																														//	AT+CMGF=0				- Устанавливаем режим PDU.
-			runAT(F("AT+CNMI=1,0,0,0,0\r\n"));																												//	AT+CNMI=1,0,0,0,0		- Индикация новых сообщений: 1-коды отображаются без буферизации, 0-SMS не отображать, 0-рассылку не отображать, 0-подтверждения о доставке не отображать, 0-работа с буфером на момент написания библиотеки не поддерживается.
-			runAT(F("AT+CMGD=1,3\r\n"), 10000);																												//	AT+CMGD=1,3				- Удаляем все прочитанные, отправленные и неотправленные SMS сообщения. На выполнение команды выделяем до 10 секунд.
-			runAT(F("AT+CSCS=\"HEX\"\r\n"));																												//	AT+CSCS="HEX"			- Устанавливаем шестнадцатиричный набор символов.
-			runAT(F("AT+CPMS=\"SM\",\"SM\",\"SM\"\r\n"));																									//	AT+CPMS="SM","SM","SM"	- "SM"-использовать память SIM-карты для просмотра, чтения и удаления сообщений, "SM"-использовать память SIM-карты для написания и отправки сообщений, "SM"-использовать память SIM-карты для получения и сохранения сообщений.
-//			Определяем значения переменных:																													//	
-			maxSMS=SMSmax();																																//	Максимально допустимое количество входящих непрочитанных SMS сообщений.
-			numSMS=maxSMS;																																	//	Номер последнего прочитанного входящего SMS сообщения.
-//			Возвращаем положительный ответ инициализации:																									//	
-			return true;																																	//	
-}																																							//	
-																																							//	
 //		ФУНКЦИЯ ПРЕОБРАЗОВАНИЯ СИМВОЛА В ЧИСЛО:																												//	Функция возвращает:	число uint8_t.
 uint8_t	iarduino_GSM::_num(char symbol){																													//	Аргументы функции:	символ 0-9,a-f,A-F.
 			uint8_t i = uint8_t(symbol);																													//	Получаем код символа
@@ -373,14 +289,10 @@ String	iarduino_GSM::runAT(String command, uint32_t timeout, bool early){							
 			uint32_t millisEnd;																																//	Переменная для хранения времени выхода из функции.
 //			Чистим буфер UART:																																//	
 			if(flgType)	{while((*(HardwareSerial*)objSerial).available()>0){(*(HardwareSerial*)objSerial).read();}}											//	Читаем все символы из буфера в никуда.
-			#ifdef SoftwareSerial_h																															//
-			else		{while((*(SoftwareSerial*)objSerial).available()>0){(*(SoftwareSerial*)objSerial).read();}}											//	Читаем все символы из буфера в никуда.
-			#endif																																			//
+			else		{while((*(SOFTwareSerial*)objSerial).available()>0){(*(SOFTwareSerial*)objSerial).read();}}											//	Читаем все символы из буфера в никуда.
 //			Передаём AT-команду:																															//	
 			if(flgType)	{(*(HardwareSerial*)objSerial).print(command);}																						//	
-			#ifdef SoftwareSerial_h																															//
-			else		{(*(SoftwareSerial*)objSerial).print(command);}																						//	
-			#endif																																			//
+			else		{(*(SOFTwareSerial*)objSerial).print(command);}																						//	
 //			Чистим строку для получения ответа:																												//	
 			strBuffer = "";																																	//	
 //			Определяем время выхода из функции:																												//	
@@ -390,9 +302,7 @@ String	iarduino_GSM::runAT(String command, uint32_t timeout, bool early){							
 //				Читаем очередной символ:																													//	
 				f=0;																																		//
 				if(flgType)	{if((*(HardwareSerial*)objSerial).available()>0){i=(*(HardwareSerial*)objSerial).read(); strBuffer+=i; f=1;}else{delay(10);}}	//	
-				#ifdef SoftwareSerial_h																														//
-				else		{if((*(SoftwareSerial*)objSerial).available()>0){i=(*(SoftwareSerial*)objSerial).read(); strBuffer+=i; f=1;}else{delay(10);}}	//	
-				#endif																																		//
+				else		{if((*(SOFTwareSerial*)objSerial).available()>0){i=(*(SOFTwareSerial*)objSerial).read(); strBuffer+=i; f=1;}else{delay(10);}}	//	
 //				Досрочно выходим из цикла получения ответа:																									//	Проверяем не пришли ли подряд символы "\r\nOK\r\n" или "ERROR".
 				if(early){																																	//
 					if(f){																																	//
@@ -436,9 +346,7 @@ String	iarduino_GSM::runUSSD(String command, uint32_t timeout){																	
 //				Читаем очередной символ:																													//	
 				f=0;																																		//
 				if(flgType)	{if((*(HardwareSerial*)objSerial).available()>0){j=(*(HardwareSerial*)objSerial).read(); strBuffer+=j; f=1;}else{delay(10);}}	//	
-				#ifdef SoftwareSerial_h																														//
-				else		{if((*(SoftwareSerial*)objSerial).available()>0){j=(*(SoftwareSerial*)objSerial).read(); strBuffer+=j; f=1;}else{delay(10);}}	//	
-				#endif																																		//
+				else		{if((*(SOFTwareSerial*)objSerial).available()>0){j=(*(SOFTwareSerial*)objSerial).read(); strBuffer+=j; f=1;}else{delay(10);}}	//	
 //				Досрочно выходим из цикла получения ответа:																									//	Проверяем не пришли ли подряд символы "\r\nOK\r\n" или "ERROR".
 				if(f){																																		//
 					if(cnt==0) {if(j=='\r'){cnt++;}else{cnt=0;}}else																						//	Если при отсутствии совпадений пришел символ '\r', то считаем его 1 символом совпавшим с 1 строкой "\r\n".
@@ -691,9 +599,9 @@ bool	iarduino_GSM::SMSsend(const char* txt, const char* num, uint16_t lngID, uin
 			for(uint8_t i=0; i<strlen(txt); i++){ if(uint8_t(txt[i])>=0x80){PDU_DCS=0x08;} }																//	Если в одном из байтов отправляемого текста установлен 7 бит, значит сообщение требуется закодировать в формате UCS2
 //			Определяем класс SMS сообщения;																													//	
 			if(clsSMSsend==GSM_SMS_CLASS_0){PDU_DCS|=0x10;}else																								//	SMS сообщение 0 класса
-			if(clsSMSsend==GSM_SMS_CLASS_0){PDU_DCS|=0x11;}else																								//	SMS сообщение 1 класса
-			if(clsSMSsend==GSM_SMS_CLASS_0){PDU_DCS|=0x12;}else																								//	SMS сообщение 2 класса
-			if(clsSMSsend==GSM_SMS_CLASS_0){PDU_DCS|=0x13;}																									//	SMS сообщение 3 класса
+			if(clsSMSsend==GSM_SMS_CLASS_1){PDU_DCS|=0x11;}else																								//	SMS сообщение 1 класса
+			if(clsSMSsend==GSM_SMS_CLASS_2){PDU_DCS|=0x12;}else																								//	SMS сообщение 2 класса
+			if(clsSMSsend==GSM_SMS_CLASS_3){PDU_DCS|=0x13;}																									//	SMS сообщение 3 класса
 //			Проверяем формат номера (адреса получателя):																									//	
 			if(num[0]=='+'){if(num[1]!='7'){return false;}}																									//	Если первые символы не '+7' значит номер указан не в международном формате.
 			else           {if(num[0]!='7'){return false;}}																									//	Если первый символ  не  '7' значит номер указан не в международном формате.

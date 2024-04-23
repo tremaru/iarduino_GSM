@@ -1,5 +1,5 @@
 //	Библиотека для работы с GSM/GPRS Shield A6: http://iarduino.ru/shop/Expansion-payments/gsm-gprs-shield.html
-//  Версия: 1.1.0
+//  Версия: 1.1.1
 //  Последнюю версию библиотеки Вы можете скачать по ссылке: http://iarduino.ru/file/345.html
 //  Подробное описание функции бибилиотеки доступно по ссылке: https://wiki.iarduino.ru/page/gsm-gprs-shield/
 //  Библиотека является собственностью интернет магазина iarduino.ru и может свободно использоваться и распространяться!
@@ -11,8 +11,12 @@
 #ifndef iarduino_GSM_h																															//
 #define iarduino_GSM_h																															//
 																																				//
-#ifdef    SoftwareSerial_h																														//	Если в скетче подключена библиотека  SoftwareSerial,
-#include "SoftwareSerial.h"																														//	то разрешаем работать  с библиотекой SoftwareSerial.
+#if defined(__SOFTWARE_SERIAL_H__) || defined(SoftwareSerial_h)																					//	Если в скетче подключена библиотека  SoftwareSerial,
+	#include <SoftwareSerial.h>																													//	то разрешаем работать  с библиотекой SoftwareSerial.
+	#define incSWSerial																															//	Флаг разрешающий определить функцию begin(SoftwareSerial&)
+	#define SOFTwareSerial SoftwareSerial																										//	Имя класса SoftwareSerial
+#else																																			//	Если библиотека не подключена, то ...
+	#define SOFTwareSerial HardwareSerial																										//	Нельзя использовать имя класса SoftwareSerial, используем HardwareSerial.
 #endif																																			//
 																																				//
 #if defined(ARDUINO) && (ARDUINO >= 100)																										//
@@ -61,7 +65,7 @@ class iarduino_GSM{																																//
 																																				//	
 	public:			iarduino_GSM			(uint8_t);																							//	Объявляем  конструктор класса								(аргумент функции: № вывода к которому подключён вход PWR модуля)
 		bool		begin					(HardwareSerial &i){flgType=1; objSerial=&i; return _begin();}										//	Определяем функцию инициализации модуля						(аргумент функции: объект для работы с аппаратным UART)
-		#ifdef SoftwareSerial_h																													//
+		#ifdef incSWSerial																														//
 		bool		begin					(SoftwareSerial &i){flgType=0; objSerial=&i; return _begin();}										//	Определяем функцию инициализации модуля						(аргумент функции: объект для работы с программным UART)
 		#endif																																	//
 		String		runAT					(String      Command, uint32_t TimeOut=200, bool NoWait=true);										//	Объявляем  функцию выполнения AT-команд						(аргумент функции: строка с АТ-командой,  таймаут в миллисекундах, флаг разрешающий досрочный выход при ответе "\r\nOK\r\n" или "ERROR")
@@ -105,7 +109,6 @@ class iarduino_GSM{																																//
 		bool		SOUNDmute				(void       );																						//	Объявляем  функцию проверки отключения микрофона			(без аргументов)
 																																				//	
 	private:																																	//	
-		bool		_begin					(void);																								//	Объявляем  функцию инициализации модуля						(без аргументов)
 		uint8_t		_num					(char);																								//	Объявляем  функцию преобразования символа в число			(аргумент функции: символ 0-9,a-f,A-F)
 		char		_char					(uint8_t);																							//	Объявляем  функцию преобразования числа в символ			(аргумент функции: число 0-15)
 		uint8_t		_SMSsum					(void);																								//	Объявляем  функцию для получения кол SMS в памяти			(без аргументов)
@@ -126,10 +129,97 @@ class iarduino_GSM{																																//
 		String		strBuffer;																													//	Объявляем  строку для работы с текстовыми данными			(массив)
 		uint8_t		numSMS;																														//	Объявляем  переменную для хранения № прочитанной SMS		(число)
 		uint8_t		maxSMS;																														//	Объявляем  переменную для хранения объема памяти SMS		(число)
-		uint8_t		codTXTread =			GSM_TXT_UTF8;																						//	Тип кодировки строки StrIn.
-		uint8_t		codTXTsend =			GSM_TXT_UTF8;																						//	Тип кодировки строки StrIn.
+		uint8_t		codTXTread =			GSM_TXT_UTF8;																						//	Тип кодировки строки StrIn.									(кодировка GSM_TXT_CP866 / GSM_TXT_UTF8 / GSM_TXT_WIN1251)
+		uint8_t		codTXTsend =			GSM_TXT_UTF8;																						//	Тип кодировки строки StrIn.									(кодировка GSM_TXT_CP866 / GSM_TXT_UTF8 / GSM_TXT_WIN1251)
 		uint8_t		clsSMSsend =			GSM_SMS_CLASS_NO;																					//	Класс отправляемых SMS сообщений.
-																																				//	
-};
+		bool		_begin					(void){																								//	Определяем функцию инициализации модуля						(без аргументов)
+												pinMode(pinGSMPWR, OUTPUT);																		//	Переводим вывод pinGSMPWR в режим выхода.
+												flgSpeed = true;																				//	Устанавливаем флаг согласования скорости, иначе функция runAT() не будет работать.
+											//	Настройка скорости модуля:																		//	
+												for(uint8_t i=0; i<10; i++){																	//	Всего 10 попыток.
+												//	Выключаем и включаем модуль:																//	
+													digitalWrite(pinGSMPWR, HIGH); delay(3000);													//	Устанавливаем на выводе pinGSMPWR уровень логической 1 (выключаем модуль).
+													digitalWrite(pinGSMPWR, LOW ); delay(3000);													//	Устанавливаем на выводе pinGSMPWR уровень логического 0 (включаем модуль).
+												//	Разрываем связь UART:																		//	
+													if(flgType)	{(*(HardwareSerial*)objSerial).end();}											//	
+													#ifndef RENESAS_CORTEX_M4																	//	Библиотека SoftwareSerial для плат Arduino UNO R4 не имеет функции end(). По состоянию на март 2024г.
+													else		{(*(SOFTwareSerial*)objSerial).end();}											//	
+													#endif																						//
+													delay(100);																					//	
+												//	Инициируем передачу данных по UART на скорости 115200:										//	115200 бит/сек - это скорость на которой модуль работает по умолчанию
+													if(flgType)	{(*(HardwareSerial*)objSerial).begin(115200);}									//	
+													else		{(*(SOFTwareSerial*)objSerial).begin(115200);}									//	
+													delay(100);																					//	
+												//	Ждём готовность UART после инициализации:													//
+													if(flgType)	{while(!(*(HardwareSerial*)objSerial)){;}}										//	
+													#ifndef RENESAS_CORTEX_M4																	//	Библиотека SoftwareSerial для плат Arduino UNO R4 не поддерживает operator!(bool). По состоянию на март 2024г.
+													else		{while(!(*(SOFTwareSerial*)objSerial)){;}}										//	
+													#endif																						//
+													delay(100);																					//
+												//	Отправляем команду модулю, перейти на скорость GSM_UART_SPEED								//
+													runAT( ((String) "ATZ+IPR=" + GSM_UART_SPEED + "\r\n"), 500, false);						//	Команда ATZ+IPR=СКОРОСТЬ - некорректная, но в некоторых версиях A6/A9 работает лучше чем AT+IPR.
+													runAT( ((String) "AT+IPR="  + GSM_UART_SPEED + "\r\n"), 500, false);						//	Команда AT+IPR=СКОРОСТЬ - указывает модулю перейти на указанную скорость передачи данных по шине UART, таймаут 500мс, запрещаем досрочный выход.
+												//	Разрываем связь UART:																		//	
+													if(flgType)	{(*(HardwareSerial*)objSerial).end();}											//	
+													#ifndef RENESAS_CORTEX_M4																	//	Библиотека SoftwareSerial для плат Arduino UNO R4 не имеет функции end(). По состоянию на март 2024г.
+													else		{(*(SOFTwareSerial*)objSerial).end();}											//	
+													#endif																						//
+													delay(100);																					//	
+												//	Инициируем передачу данных по UART на скорости GSM_UART_SPEED:								//	При работе с аппаратным UART не на всех платах Arduino удаётся стабильно работать на скорости 115200.
+													if(flgType)	{(*(HardwareSerial*)objSerial).begin(GSM_UART_SPEED);}							//	По этому приходится переходить на более низкие скорости. Новая скорость указана в константе GSM_UART_SPEED.
+													else		{(*(SOFTwareSerial*)objSerial).begin(GSM_UART_SPEED);}							//	
+													delay(100);																					//	
+												//	Ждём готовность UART после инициализации:													//
+													if(flgType)	{while(!(*(HardwareSerial*)objSerial)){;}}										//	
+													#ifndef RENESAS_CORTEX_M4																	//	Библиотека SoftwareSerial для плат Arduino UNO R4 не поддерживает operator!(bool). По состоянию на март 2024г.
+													else		{while(!(*(SOFTwareSerial*)objSerial)){;}}										//	
+													#endif																						//
+													delay(500);																					//
+												//	Проверяем наличие связи с модулем:															//	
+													for(uint8_t j=0; j<10; j++){																//
+														if(runAT(F("AT\r\n")).indexOf(F("\r\nOK\r\n")) > -1){i=10; j=10; flgSpeed=false;}		//	Если на команду "AT" модуль ответит "\r\nOK\r\n", то принудительно выходим из циклов.
+													}																							//
+												}																								//
+												if( !flgSpeed ){ flgSpeed=true; }else{ flgSpeed=false; return false; }							//	Если флаг flgSpeed сброшен, значит скорость установлена, иначе сбрасываем флаг flgSpeed и выходим из функции.
+											//	Ждём завершения потока незапрашиваемых кодов от модуля:											//	
+												uint32_t millisEnd;																				//	Объявляем переменную для хранения время выхода из режима ожидания завершения незапрашиваемых кодов от модуля.
+												bool flgBuff;																					//	Объявляем флаг получения незапрашиваемых кодов от модуля.
+												do{	flgBuff = false;																			//	Сбрасываем флаг flgBuff.
+													millisEnd = millis() + 5000;																//	Устанавливаем время выхода из режима ожидания завершения незапрашиваемых кодов от модуля.
+													while(millis()<millisEnd){																	//	Пока указанное время не достигнуто ...
+														if(flgType)	{if((*(HardwareSerial*)objSerial).available()>0){(*(HardwareSerial*)objSerial).read(); flgBuff=true;}} // Проверяем наличие сомволов в буфере UART, если символ есть, то читаем его в никуда и устанавливаем флаг flgBuff.
+														else		{if((*(SOFTwareSerial*)objSerial).available()>0){(*(SOFTwareSerial*)objSerial).read(); flgBuff=true;}} // Проверяем наличие сомволов в буфере UART, если символ есть, то читаем его в никуда и устанавливаем флаг flgBuff.
+														if(flgBuff)	{millisEnd=millis();}														//	Если флаг flgBuff установлен, значит мы продолжаем получать незапрашиваемые коды, выходим из цикла для обновления времени ожидания.
+													}																							//	
+												}	while(flgBuff);																				//	Если флаг flgBuff установлен, повторяем цикл, при новом проходе цикла время ожидания будет обновлено.
+											//	Проверяем готовность модуля:																	//	
+												switch( status() ){																				//	
+													case GSM_SIM_NO:		return false; break;												//	Модуль не может работать, нет сим карты.
+													case GSM_SIM_FAULT:		return false; break;												//	Модуль не может работать, сим карта неисправна.
+													case GSM_SIM_ERR:		return false; break;												//	Модуль не может работать, сим карта не прошла проверку.
+													case GSM_REG_FAULT:		return false; break;												//	Модуль не может работать, оператор сотовой связи отклонил регистрацию модема в своей сети.
+													case GSM_UNAVAILABLE:	return false; break;												//	Модуль не может работать, так как он недоступен и не выполняет AT-команды.
+													case GSM_UNKNOWN:		return false; break;												//	Модуль не может работать, так как его статус неизвестен и не гарантирует корректное выполнение AT-команд.
+													case GSM_SLEEP:			return false; break;												//	Модуль не может работать, так как он находится в режиме ограниченной функциональности.
+												}																								//	
+											//	Отправляем модулю команды конфигурации:															//	
+												runAT(F("AT+CSCS=\"HEX\"\r\n"));																//	AT+CSCS="HEX"			- Устанавливаем шестнадцатиричный набор символов.
+												runAT(F("AT+CPMS=\"SM\",\"SM\",\"SM\"\r\n"));													//	AT+CPMS="SM","SM","SM"	- "SM"-использовать память SIM-карты для просмотра, чтения и удаления сообщений, "SM"-использовать память SIM-карты для написания и отправки сообщений, "SM"-использовать память SIM-карты для получения и сохранения сообщений.
+												runAT(F("ATE0\r\n"));																			//	ATE0					- Отключить эхо.
+												runAT(F("ATV1\r\n"));																			//	ATV1					- Отвечать на команды текстом, а не которкими цифровыми ответами.
+												runAT(F("AT+CMEE=1\r\n"));																		//	AT+CMEE=1				- При возникновении ошибок возвращать ERROR и код ошибки.
+												runAT(F("AT+CREG=0\r\n"));																		//	AT+CREG=0				- Отключить незапрашиваемые сообщения о статусе регистрации в сети.
+												runAT(F("AT+CMGF=0\r\n"));																		//	AT+CMGF=0				- Устанавливаем режим PDU.
+												runAT(F("AT+CNMI=1,0,0,0,0\r\n"));																//	AT+CNMI=1,0,0,0,0		- Индикация новых сообщений: 1-коды отображаются без буферизации, 0-SMS не отображать, 0-рассылку не отображать, 0-подтверждения о доставке не отображать, 0-работа с буфером на момент написания библиотеки не поддерживается.
+												runAT(F("AT+CMGD=1,3\r\n"), 10000);																//	AT+CMGD=1,3				- Удаляем все прочитанные, отправленные и неотправленные SMS сообщения. На выполнение команды выделяем до 10 секунд.
+												runAT(F("AT+CSCS=\"HEX\"\r\n"));																//	AT+CSCS="HEX"			- Устанавливаем шестнадцатиричный набор символов.
+												runAT(F("AT+CPMS=\"SM\",\"SM\",\"SM\"\r\n"));													//	AT+CPMS="SM","SM","SM"	- "SM"-использовать память SIM-карты для просмотра, чтения и удаления сообщений, "SM"-использовать память SIM-карты для написания и отправки сообщений, "SM"-использовать память SIM-карты для получения и сохранения сообщений.
+											//	Определяем значения переменных:																	//	
+												maxSMS=SMSmax();																				//	Максимально допустимое количество входящих непрочитанных SMS сообщений.
+												numSMS=maxSMS;																					//	Номер последнего прочитанного входящего SMS сообщения.
+											//	Возвращаем положительный ответ инициализации:													//	
+												return true;																					//	
+											}																									//	
+};																																				//
 
 #endif
