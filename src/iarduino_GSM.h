@@ -1,5 +1,7 @@
-//	Библиотека для работы с GSM/GPRS Shield A6: http://iarduino.ru/shop/Expansion-payments/gsm-gprs-shield.html
-//  Версия: 1.1.1
+//	Библиотека для работы с GSM/GPRS шилдами:
+//	GSM/GPRS Shield A6: http://iarduino.ru/shop/Expansion-payments/gsm-gprs-shield.html
+//	GSM/GPRS Shield A9: https://iarduino.ru/shop/Expansion-payments/gsm-gprs-shield.html
+//  Версия: 1.1.2
 //  Последнюю версию библиотеки Вы можете скачать по ссылке: http://iarduino.ru/file/345.html
 //  Подробное описание функции бибилиотеки доступно по ссылке: https://wiki.iarduino.ru/page/gsm-gprs-shield/
 //  Библиотека является собственностью интернет магазина iarduino.ru и может свободно использоваться и распространяться!
