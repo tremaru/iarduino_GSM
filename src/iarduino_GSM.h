@@ -1,7 +1,7 @@
 //	Библиотека для работы с GSM/GPRS шилдами:
 //	GSM/GPRS Shield A6: http://iarduino.ru/shop/Expansion-payments/gsm-gprs-shield.html
 //	GSM/GPRS Shield A9: https://iarduino.ru/shop/Expansion-payments/gsm-gprs-shield.html
-//  Версия: 1.1.2
+//  Версия: 1.1.3
 //  Последнюю версию библиотеки Вы можете скачать по ссылке: http://iarduino.ru/file/345.html
 //  Подробное описание функции бибилиотеки доступно по ссылке: https://wiki.iarduino.ru/page/gsm-gprs-shield/
 //  Библиотека является собственностью интернет магазина iarduino.ru и может свободно использоваться и распространяться!
@@ -153,9 +153,11 @@ class iarduino_GSM{																																//
 													else		{(*(SOFTwareSerial*)objSerial).begin(115200);}									//	
 													delay(100);																					//	
 												//	Ждём готовность UART после инициализации:													//
-													if(flgType)	{while(!(*(HardwareSerial*)objSerial)){;}}										//	
-													#ifndef RENESAS_CORTEX_M4																	//	Библиотека SoftwareSerial для плат Arduino UNO R4 не поддерживает operator!(bool). По состоянию на март 2024г.
-													else		{while(!(*(SOFTwareSerial*)objSerial)){;}}										//	
+													#ifndef ARDUINO_ARCH_RP2040																	//	Для плат Paspberry Pi Pico поддерживается (bool)Serial, но не поддерживается (bool)Serial1. Возможно после 2024 года этот баг уберут.
+															if(flgType)	{while(!(*(HardwareSerial*)objSerial)){;}}								//	
+														#ifndef RENESAS_CORTEX_M4																//	Библиотека SoftwareSerial для плат Arduino UNO R4 не поддерживает operator!(bool). По состоянию на март 2024г.
+															else		{while(!(*(SOFTwareSerial*)objSerial)){;}}								//	
+														#endif																					//
 													#endif																						//
 													delay(100);																					//
 												//	Отправляем команду модулю, перейти на скорость GSM_UART_SPEED								//
@@ -172,9 +174,11 @@ class iarduino_GSM{																																//
 													else		{(*(SOFTwareSerial*)objSerial).begin(GSM_UART_SPEED);}							//	
 													delay(100);																					//	
 												//	Ждём готовность UART после инициализации:													//
-													if(flgType)	{while(!(*(HardwareSerial*)objSerial)){;}}										//	
-													#ifndef RENESAS_CORTEX_M4																	//	Библиотека SoftwareSerial для плат Arduino UNO R4 не поддерживает operator!(bool). По состоянию на март 2024г.
-													else		{while(!(*(SOFTwareSerial*)objSerial)){;}}										//	
+													#ifndef ARDUINO_ARCH_RP2040																	//	Для плат Paspberry Pi Pico поддерживается (bool)Serial, но не поддерживается (bool)Serial1. Возможно после 2024 года этот баг уберут.
+															if(flgType)	{while(!(*(HardwareSerial*)objSerial)){;}}								//	
+														#ifndef RENESAS_CORTEX_M4																//	Библиотека SoftwareSerial для плат Arduino UNO R4 не поддерживает operator!(bool). По состоянию на март 2024г.
+															else		{while(!(*(SOFTwareSerial*)objSerial)){;}}								//	
+														#endif																					//
 													#endif																						//
 													delay(500);																					//
 												//	Проверяем наличие связи с модулем:															//	
